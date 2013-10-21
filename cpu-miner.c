@@ -223,6 +223,7 @@ static struct option const options[] = {
 struct work {
 	uint32_t data[32];
 	uint32_t target[8];
+	uint32_t nFactor;
 };
 
 static struct work g_work;
@@ -251,6 +252,28 @@ static bool jobj_binary(const json_t *obj, const char *key,
 	return true;
 }
 
+static bool jobj_integer(const json_t *obj, const char *key, uint32_t *mem)
+{
+	uint32_t number;
+	json_t *tmp;
+
+	tmp = json_object_get(obj, key);
+	if (unlikely(!tmp)) {
+		applog(LOG_ERR, "JSON key '%s' not found", key);
+		return false;
+	}
+	number = json_integer_value(tmp);
+	if (unlikely(!number)) {
+		applog(LOG_ERR, "JSON key '%s' is not a integer", key);
+		return false;
+	}
+
+	*(mem) = number;
+
+	return true;
+}
+
+
 static bool work_decode(const json_t *val, struct work *work)
 {
 	int i;
@@ -261,6 +284,12 @@ static bool work_decode(const json_t *val, struct work *work)
 	}
 	if (unlikely(!jobj_binary(val, "target", work->target, sizeof(work->target)))) {
 		applog(LOG_ERR, "JSON inval target");
+		goto err_out;
+	}
+
+
+	if (unlikely(!jobj_integer(val, "nFactor", &(work->nFactor)))) {
+		applog(LOG_ERR, "JSON inval nFactor");
 		goto err_out;
 	}
 
@@ -634,7 +663,7 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_SCRYPT_JANE:
 			rc = scanhash_scrypt_jane(thr_id, work.data, work.target,
-			                     max_nonce, &hashes_done);
+			                     max_nonce, &hashes_done,work.nFactor);
 			break;
 
 		case ALGO_SHA256D:
