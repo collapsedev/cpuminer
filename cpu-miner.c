@@ -223,7 +223,7 @@ static struct option const options[] = {
 struct work {
 	uint32_t data[32];
 	uint32_t target[8];
-	uint32_t nFactor;
+	uint32_t nFactor; // Nfactor integer
 };
 
 static struct work g_work;
@@ -252,6 +252,9 @@ static bool jobj_binary(const json_t *obj, const char *key,
 	return true;
 }
 
+/**
+ * Json object to Integer
+ */
 static bool jobj_integer(const json_t *obj, const char *key, uint32_t *mem)
 {
 	uint32_t number;
@@ -286,7 +289,6 @@ static bool work_decode(const json_t *val, struct work *work)
 		applog(LOG_ERR, "JSON inval target");
 		goto err_out;
 	}
-
 
 	if (unlikely(!jobj_integer(val, "nFactor", &(work->nFactor)))) {
 		applog(LOG_ERR, "JSON inval nFactor");

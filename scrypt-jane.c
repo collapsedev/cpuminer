@@ -190,7 +190,7 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata,
 	const uint32_t *ptarget,
 	uint32_t max_nonce, unsigned long *hashes_done,unsigned int nFactor)
 {
-	uint32_t data[22], hash[8], target_swap[8];
+	uint32_t data[22], hash[8], target_swap[8]; // new values
         volatile unsigned char *hashc = (unsigned char *) hash;
         volatile unsigned char *datac = (unsigned char *) data;
         volatile unsigned char *pdatac = (unsigned char *) pdata;
@@ -198,17 +198,16 @@ int scanhash_scrypt_jane(int thr_id, uint32_t *pdata,
 	int i;
 
         /* byte swap it */
-        for(int z=0;z<22;z++) {
+        for(int z=0;z<22;z++) { // new values
             datac[(z*4)  ] = pdatac[(z*4)+3];
             datac[(z*4)+1] = pdatac[(z*4)+2];
             datac[(z*4)+2] = pdatac[(z*4)+1];
             datac[(z*4)+3] = pdatac[(z*4)  ];
         }
 
-     //int nfactor = GetNfactor(data[17]);
      // printf("nFactor:%u\n",nFactor);
 
-    unsigned int header_size = 80 + sizeof (unsigned long long);
+    unsigned int header_size = 80 + sizeof (unsigned long long); // new values
 
 	do {
 		data[19] = ++n;
