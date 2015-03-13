@@ -186,55 +186,62 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 
 
 
-int scanhash_scrypt_jane(int thr_id, uint32_t *pdata,
-	const uint32_t *ptarget,
-	uint32_t max_nonce, unsigned long *hashes_done,unsigned int nFactor)
-{
-	uint32_t data[22], hash[8], target_swap[8]; // new values
-        volatile unsigned char *hashc = (unsigned char *) hash;
-        volatile unsigned char *datac = (unsigned char *) data;
-        volatile unsigned char *pdatac = (unsigned char *) pdata;
+int scanhash_scrypt_jane(int thr_id, uint32_t *pdata, const uint32_t *ptarget,
+		uint32_t max_nonce, unsigned long *hashes_done, unsigned int nFactor) {
+
+	unsigned int header_size = 88; // header struct size
+	unsigned int n_elements = header_size / 4;
+
+	uint32_t data[n_elements], hash[8], target_swap[8]; // new values
+	volatile unsigned char *hashc = (unsigned char *) hash;
+	volatile unsigned char *datac = (unsigned char *) data;
+	volatile unsigned char *pdatac = (unsigned char *) pdata;
+
 	uint32_t n = pdata[19] - 1;
-	int i;
 
-        /* byte swap it */
-        for(int z=0;z<22;z++) { // new values
-            datac[(z*4)  ] = pdatac[(z*4)+3];
-            datac[(z*4)+1] = pdatac[(z*4)+2];
-            datac[(z*4)+2] = pdatac[(z*4)+1];
-            datac[(z*4)+3] = pdatac[(z*4)  ];
-        }
+	/* byte swap it */
+	for (int z = 0; z < n_elements; z++) { // new values size / 4
+		datac[(z * 4)] = pdatac[(z * 4) + 3];
+		datac[(z * 4) + 1] = pdatac[(z * 4) + 2];
+		datac[(z * 4) + 2] = pdatac[(z * 4) + 1];
+		datac[(z * 4) + 3] = pdatac[(z * 4)];
+	}
 
-     // printf("nFactor:%u\n",nFactor);
-
-    unsigned int header_size = 80 + sizeof (unsigned long long); // new values
+	typedef unsigned long long int uint64;
+	uint64 * hashcmp = ((uint64 *) hash + 3);
+	uint64  targetcmp = *((uint64 *) ptarget + 3);
 
 	do {
 		data[19] = ++n;
 
-		scrypt((unsigned char *)data, header_size, (unsigned char *)data, header_size,nFactor, 0, 0, (unsigned char *)hash, 32);
+		scrypt((unsigned char *) data, header_size, (unsigned char *) data,
+				header_size, nFactor, 0, 0, (unsigned char *) hash, 32);
 
-		if (hashc[31] == 0 && hashc[30] == 0) {
-/*
-                    for(int z=7;z>=0;z--)
-                       fprintf(stderr, "%08x ", hash[z]);
-                    fprintf(stderr, "\n");
+		//--
+		/*printf("------------------------------\n");
+		for (unsigned int i = 0; i < 4;i++){
+			printf(" ha[%u]=[%llu];",i,*((uint64 *) hash + i));
+		}
+		printf("\n");
+		for (unsigned int i = 0; i < 4;i++){
+			printf(" ta[%u]=[%llu]; ",i,*((uint64 *) ptarget + i));
+		}
+		printf("\n");
+		printf("hashcmp:%llu targetcmp:%llu\n",*hashcmp , targetcmp);*/
+		//--
 
-                    for(int z=7;z>=0;z--)
-                       fprintf(stderr, "%08x ", ptarget[z]);
-                    fprintf(stderr, "\n");
-*/
-                    if(fulltest(hash, ptarget)) {
-			*hashes_done = n - pdata[19] + 1;
-			pdatac[76] = datac[79];
-                        pdatac[77] = datac[78];
-                        pdatac[78] = datac[77];
-                        pdatac[79] = datac[76];
-			return 1;
-                   }
+		if (*hashcmp < targetcmp) {
+			if (fulltest(hash, ptarget)) {
+				*hashes_done = n - pdata[19] + 1;
+				pdatac[76] = datac[79];
+				pdatac[77] = datac[78];
+				pdatac[78] = datac[77];
+				pdatac[79] = datac[76];
+				return 1;
+			}
 		}
 	} while (n < max_nonce && !work_restart[thr_id].restart);
-	
+
 	*hashes_done = n - pdata[19] + 1;
 	pdata[19] = n;
 	return 0;
